@@ -7,6 +7,7 @@ import h5py
 import malis
 
 import gunpowder
+assert gunpowder.__file__ == os.path.abspath("../../gunpowder/__init__.pyc"), gunpowder.__file__
 from gunpowder import VolumeTypes, RandomLocation, Normalize, RandomProvider, GrowBoundary, \
     SplitAndRenumberSegmentationLabels, AddGtAffinities, PreCache, Snapshot, BatchRequest, ElasticAugment, \
     SimpleAugment, IntensityAugment, BalanceAffinityLabels, PrintProfilingStats
