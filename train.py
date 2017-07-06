@@ -13,6 +13,7 @@ from gunpowder import VolumeTypes, RandomLocation, Normalize, RandomProvider, Gr
     SplitAndRenumberSegmentationLabels, AddGtAffinities, PreCache, Snapshot, BatchRequest, ElasticAugment, \
     SimpleAugment, IntensityAugment, BalanceAffinityLabels, PrintProfilingStats, Typecast
 from gunpowder.caffe import Train
+from gunpowder.nodes.dvid_source import DvidSource
 
 import constants
 
@@ -63,6 +64,16 @@ def train():
                 resolution=(8, 8, 8),
             )
         )
+    dvid_source = DvidSource(
+        hostname='slowpoke3',
+        port=32788,
+        uuid='341',
+        raw_array_name='grayscale',
+        gt_array_name='groundtruth',
+        gt_mask_roi_name="seven_column_eroded7_z_lt_5024",
+        resolution=(8, 8, 8),
+    )
+    data_sources.append(dvid_source)
     data_sources = tuple(
         data_source +
         RandomLocation() +
