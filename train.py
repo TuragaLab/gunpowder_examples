@@ -5,12 +5,13 @@ import os
 
 import h5py
 import malis
+import numpy as np
 
 import gunpowder
 assert gunpowder.__file__ == os.path.abspath("../../gunpowder/__init__.pyc"), gunpowder.__file__
 from gunpowder import VolumeTypes, RandomLocation, Normalize, RandomProvider, GrowBoundary, \
     SplitAndRenumberSegmentationLabels, AddGtAffinities, PreCache, Snapshot, BatchRequest, ElasticAugment, \
-    SimpleAugment, IntensityAugment, BalanceAffinityLabels, PrintProfilingStats
+    SimpleAugment, IntensityAugment, BalanceAffinityLabels, PrintProfilingStats, Typecast
 from gunpowder.caffe import Train
 
 import constants
@@ -63,9 +64,10 @@ def train():
             )
         )
     data_sources = tuple(
-        data_source + \
-        RandomLocation() + \
-        Normalize()
+        data_source +
+        RandomLocation() +
+        Normalize() +
+        Typecast(volume_dtypes={VolumeTypes.GT_LABELS: np.dtype("uint32")})
         for data_source in data_sources
     )
 
@@ -85,6 +87,11 @@ def train():
             cache_size=11,
             num_workers=10) +
         Train(solver_parameters, use_gpu=0) +
+        Typecast(volume_dtypes={
+            VolumeTypes.GT_LABELS: np.dtype("uint32"),
+            VolumeTypes.GT_MASK: np.dtype("uint8"),
+            VolumeTypes.LOSS_SCALE: np.dtype("float32"),
+        }) +
         Snapshot(every=50, output_filename='batch_{id}.hdf') +
         PrintProfilingStats(every=50)
     )
