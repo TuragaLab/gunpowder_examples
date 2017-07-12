@@ -11,7 +11,7 @@ import gunpowder
 assert gunpowder.__file__ == os.path.abspath("../../gunpowder/__init__.pyc"), gunpowder.__file__
 from gunpowder import VolumeTypes, RandomLocation, Normalize, RandomProvider, GrowBoundary, \
     SplitAndRenumberSegmentationLabels, AddGtAffinities, PreCache, Snapshot, BatchRequest, ElasticAugment, \
-    SimpleAugment, IntensityAugment, BalanceAffinityLabels, PrintProfilingStats, Typecast
+    SimpleAugment, IntensityAugment, BalanceAffinityLabels, PrintProfilingStats, Typecast, Reject
 from gunpowder.caffe import Train
 from gunpowder.nodes.dvid_source import DvidSource
 
@@ -42,24 +42,33 @@ def train():
     request = BatchRequest()
     request.add_volume_request(VolumeTypes.RAW, constants.input_shape)
     request.add_volume_request(VolumeTypes.GT_LABELS, constants.output_shape)
+    request.add_volume_request(VolumeTypes.GT_MASK, constants.output_shape)
     request.add_volume_request(VolumeTypes.GT_AFFINITIES, constants.output_shape)
     request.add_volume_request(VolumeTypes.LOSS_SCALE, constants.output_shape)
 
-    data_sources = list()
+    data_providers = list()
     fibsem_dir = "/groups/turaga/turagalab/data/FlyEM/fibsem_medulla_7col"
-    for volume_name in (
-        "tstvol-520-1-h5",
-    ):
+    for volume_name in ("tstvol-520-1-h5",):
         h5_filepath = "./{}.h5".format(volume_name)
+        path_to_labels = os.path.join(fibsem_dir, volume_name, "groundtruth_seg.h5")
+        with h5py.File(path_to_labels, "r") as f_labels:
+            mask_shape = f_labels["main"].shape
         with h5py.File(h5_filepath, "w") as h5:
             h5['volumes/raw'] = h5py.ExternalLink(os.path.join(fibsem_dir, volume_name, "im_uint8.h5"), "main")
-            h5['volumes/labels/neuron_ids'] = h5py.ExternalLink(os.path.join(fibsem_dir, volume_name, "groundtruth_seg.h5"), "main")
-        data_sources.append(
+            h5['volumes/labels/neuron_ids'] = h5py.ExternalLink(path_to_labels, "main")
+            h5.create_dataset(
+                name="volumes/labels/mask",
+                dtype="uint8",
+                shape=mask_shape,
+                fillvalue=1,
+            )
+        data_providers.append(
             gunpowder.Hdf5Source(
                 h5_filepath,
                 datasets={
                     VolumeTypes.RAW: 'volumes/raw',
                     VolumeTypes.GT_LABELS: 'volumes/labels/neuron_ids',
+                    VolumeTypes.GT_MASK: 'volumes/labels/mask',
                 },
                 resolution=(8, 8, 8),
             )
@@ -73,18 +82,18 @@ def train():
         gt_mask_roi_name="seven_column_eroded7_z_lt_5024",
         resolution=(8, 8, 8),
     )
-    data_sources.append(dvid_source)
-    data_sources = tuple(
-        data_source +
+    data_providers.extend([dvid_source])
+    data_providers = tuple(
+        provider +
         RandomLocation() +
-        Normalize() +
-        Typecast(volume_dtypes={VolumeTypes.GT_LABELS: np.dtype("uint32")})
-        for data_source in data_sources
+        Reject(min_masked=0.5) +
+        Normalize()
+        for provider in data_providers
     )
 
     # create a batch provider by concatenation of filters
     batch_provider = (
-        data_sources +
+        data_providers +
         RandomProvider() +
         ElasticAugment([20, 20, 20], [0, 0, 0], [0, math.pi / 2.0]) +
         SimpleAugment(transpose_only_xy=False) +
