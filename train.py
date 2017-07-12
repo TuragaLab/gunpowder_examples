@@ -111,7 +111,7 @@ def train():
             VolumeTypes.GT_LABELS: np.dtype("uint32"),
             VolumeTypes.GT_MASK: np.dtype("uint8"),
             VolumeTypes.LOSS_SCALE: np.dtype("float32"),
-        }) +
+        }, safe=True) +
         Snapshot(every=50, output_filename='batch_{id}.hdf') +
         PrintProfilingStats(every=50)
     )
