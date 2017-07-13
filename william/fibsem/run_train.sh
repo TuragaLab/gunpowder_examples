@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-NAME=$(basename $(pwd)-training)
+NAME=$(basename william-$(pwd)-training)
 USER_ID=${UID}
-GUNPOWDER_PATH=$(readlink -f ../..)
+GUNPOWDER_PATH=$(readlink -f ./gunpowder)
 
 docker rm -f $NAME
 rm snapshots/*

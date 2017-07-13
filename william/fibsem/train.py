@@ -8,7 +8,11 @@ import malis
 import numpy as np
 
 import gunpowder
-assert gunpowder.__file__ == os.path.abspath("../../gunpowder/__init__.pyc"), gunpowder.__file__
+
+imported_gunpowder = os.path.dirname(gunpowder.__file__)
+desired_gunpowder = os.path.abspath("./gunpowder/gunpowder")
+assert imported_gunpowder == desired_gunpowder, "Imported gunpowder at {}, not at {}".format(imported_gunpowder, desired_gunpowder)
+
 from gunpowder import VolumeTypes, RandomLocation, Normalize, RandomProvider, GrowBoundary, \
     SplitAndRenumberSegmentationLabels, AddGtAffinities, PreCache, Snapshot, BatchRequest, ElasticAugment, \
     SimpleAugment, IntensityAugment, BalanceAffinityLabels, PrintProfilingStats, Typecast, Reject
